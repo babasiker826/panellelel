@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NEM Sorgu Paneli</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0f0f23;
+      color: #f8fafc;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 24px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-text {
+      font-size: 24px;
+      font-weight: 800;
+      color: #8b5cf6;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: #8b5cf6;
+      color: white;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+
+    .query-card, .results-card {
+      background: #1a1b2f;
+      border-radius: 20px;
+      padding: 32px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .card-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: white;
+    }
+
+    .card-subtitle {
+      color: #cbd5e1;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .input-label {
+      font-weight: 600;
+      color: white;
+      font-size: 14px;
+    }
+
+    .input-field {
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.05);
+      color: white;
+      font-size: 16px;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: #8b5cf6;
+    }
+
+    .submit-btn {
+      padding: 16px;
+      background: #8b5cf6;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .submit-btn:hover {
+      background: #7c3aed;
+    }
+
+    .results-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: white;
+    }
+
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 40px;
+      color: #cbd5e1;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(139, 92, 246, 0.3);
+      border-top: 3px solid #8b5cf6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .person-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .person-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .person-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #a78bfa;
+    }
+
+    .person-tc {
+      font-size: 14px;
+      color: #cbd5e1;
+      background: rgba(139, 92, 246, 0.2);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .person-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .detail-label {
+      font-size: 12px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    .detail-value {
+      font-size: 14px;
+      color: white;
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      padding: 16px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .success-message {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+      padding: 16px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .api-selector {
+      margin-bottom: 20px;
+    }
+
+    .api-select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.05);
+      color: white;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-text">NEM Sorgu</div>
+      </div>
+      <div class="nav-actions">
+        <a href="/panel" class="btn btn-secondary">
+          <i class="fas fa-arrow-left"></i>Panele Dön
+        </a>
+        <a href="/" class="btn btn-primary">
+          <i class="fas fa-home"></i>Ana Sayfa
+        </a>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <section class="query-card">
+        <div class="card-header">
+          <h1 class="card-title">Sorgu Paneli</h1>
+          <p class="card-subtitle">Güvenli ve hızlı sorgulama için bilgileri girin</p>
+        </div>
+        
+        <div class="api-selector">
+          <select id="apiSelect" class="api-select">
+            <option value="">API Seçin...</option>
+            <option value="Ad Soyad Sorgulama">Ad Soyad Sorgulama</option>
+            <option value="TC Sorgulama">TC Sorgulama</option>
+            <option value="GSM TC Sorgulama">GSM TC Sorgulama</option>
+            <option value="Aile Sorgulama">Aile Sorgulama</option>
+          </select>
+        </div>
+        
+        <form id="queryForm" class="form-group">
+          <div class="input-group">
+            <label class="input-label">Ad</label>
+            <input type="text" id="ad" name="ad" class="input-field" placeholder="Ad girin...">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Soyad</label>
+            <input type="text" id="soyad" name="soyad" class="input-field" placeholder="Soyad girin...">
+          </div>
+          <div class="input-group" id="tcGroup" style="display: none;">
+            <label class="input-label">TC Kimlik No</label>
+            <input type="text" id="tc" name="tc" class="input-field" placeholder="TC girin...">
+          </div>
+          <div class="input-group" id="gsmGroup" style="display: none;">
+            <label class="input-label">Telefon Numarası</label>
+            <input type="text" id="gsm" name="gsm" class="input-field" placeholder="Telefon girin...">
+          </div>
+          <button type="submit" class="submit-btn">
+            <i class="fas fa-search"></i> Sorguyu Başlat
+          </button>
+        </form>
+      </section>
+
+      <section class="results-card">
+        <h2 class="results-title">Sorgu Sonuçları</h2>
+        <div class="results-content" id="result">
+          <div class="loading" id="default-state">
+            <div class="loading-spinner"></div>
+            <p>Sorgu sonuçları burada görünecek</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const apiSelect = document.getElementById('apiSelect');
+    const form = document.getElementById('queryForm');
+    const resultDiv = document.getElementById('result');
+    const defaultState = document.getElementById('default-state');
+    
+    const adInput = document.getElementById('ad');
+    const soyadInput = document.getElementById('soyad');
+    const tcInput = document.getElementById('tc');
+    const gsmInput = document.getElementById('gsm');
+    
+    const tcGroup = document.getElementById('tcGroup');
+    const gsmGroup = document.getElementById('gsmGroup');
+
+    // API seçimine göre formu güncelle
+    apiSelect.addEventListener('change', function() {
+      const selectedApi = this.value;
+      
+      // Tüm inputları gizle
+      adInput.parentElement.style.display = 'none';
+      soyadInput.parentElement.style.display = 'none';
+      tcGroup.style.display = 'none';
+      gsmGroup.style.display = 'none';
+      
+      // Seçilen API'ye göre gerekli inputları göster
+      switch(selectedApi) {
+        case 'Ad Soyad Sorgulama':
+          adInput.parentElement.style.display = 'flex';
+          soyadInput.parentElement.style.display = 'flex';
+          adInput.required = true;
+          soyadInput.required = true;
+          break;
+        case 'TC Sorgulama':
+        case 'Aile Sorgulama':
+          tcGroup.style.display = 'flex';
+          tcInput.required = true;
+          break;
+        case 'GSM TC Sorgulama':
+          gsmGroup.style.display = 'flex';
+          gsmInput.required = true;
+          break;
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const selectedApi = apiSelect.value;
+      if (!selectedApi) {
+        alert('Lütfen bir API seçin!');
+        return;
+      }
+
+      defaultState.style.display = 'none';
+      resultDiv.innerHTML = `
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p>Sorgu yapılıyor, lütfen bekleyin...</p>
+        </div>
+      `;
+
+      // Backend'in beklediği formatta veri hazırla
+      const requestData = {
+        api: selectedApi
+      };
+
+      // Seçilen API'ye göre parametreleri ekle
+      switch(selectedApi) {
+        case 'Ad Soyad Sorgulama':
+          if (!adInput.value.trim() || !soyadInput.value.trim()) {
+            alert('Lütfen ad ve soyad girin!');
+            return;
+          }
+          requestData.ad = adInput.value.trim();
+          requestData.soyad = soyadInput.value.trim();
+          break;
+        case 'TC Sorgulama':
+        case 'Aile Sorgulama':
+          if (!tcInput.value.trim()) {
+            alert('Lütfen TC kimlik numarası girin!');
+            return;
+          }
+          requestData.tc = tcInput.value.trim();
+          break;
+        case 'GSM TC Sorgulama':
+          if (!gsmInput.value.trim()) {
+            alert('Lütfen telefon numarası girin!');
+            return;
+          }
+          requestData.gsm = gsmInput.value.trim();
+          break;
+      }
+
+      console.log('Gönderilen veri:', requestData);
+
+      try {
+        const response = await fetch('/api/sorgu', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestData),
+          credentials: 'include' // Session cookie'leri göndermek için
+        });
+
+        const result = await response.json();
+        console.log('Gelen cevap:', result);
+        
+        displayResults(result);
+        
+      } catch (error) {
+        console.error('Sorgu hatası:', error);
+        resultDiv.innerHTML = `
+          <div class="error-message">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>Sorgu Hatası</h3>
+            <p>API bağlantı hatası: ${error.message}</p>
+          </div>
+        `;
+      }
+    });
+
+    function displayResults(data) {
+      console.log('Gelen veri:', data);
+
+      if (!data || !data.success) {
+        resultDiv.innerHTML = `
+          <div class="error-message">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>Sorgu Başarısız</h3>
+            <p>${data?.error || 'Veri alınamadı'}</p>
+          </div>
+        `;
+        return;
+      }
+
+      const results = data.data;
+
+      // Eğer data string ise (hata mesajı olabilir)
+      if (typeof results === 'string') {
+        resultDiv.innerHTML = `
+          <div class="error-message">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>API Yanıtı</h3>
+            <p>${results}</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (!results || (Array.isArray(results) && results.length === 0)) {
+        resultDiv.innerHTML = `
+          <div class="success-message">
+            <i class="fas fa-check-circle"></i>
+            <h3>Sorgu Tamamlandı</h3>
+            <p>Sonuç bulunamadı.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      
+      // Array sonuçlar için
+      if (Array.isArray(results)) {
+        results.forEach((person, index) => {
+          html += renderPersonCard(person, index + 1);
+        });
+      } 
+      // Tekil object sonuç için
+      else if (typeof results === 'object') {
+        html = renderPersonCard(results, 1);
+      }
+      // Diğer durumlar
+      else {
+        html = `
+          <div class="success-message">
+            <i class="fas fa-check-circle"></i>
+            <h3>Sorgu Tamamlandı</h3>
+            <p>${JSON.stringify(results)}</p>
+          </div>
+        `;
+      }
+      
+      resultDiv.innerHTML = html;
+    }
+
+    function renderPersonCard(person, index) {
+      const name = person.ADI || person.ad || '-';
+      const surname = person.SOYADI || person.soyad || '-';
+      const tc = person.TC || person.tc || '-';
+      
+      return `
+        <div class="person-card">
+          <div class="person-header">
+            <div class="person-name">Sonuç ${index} - ${name} ${surname}</div>
+            <div class="person-tc">${tc}</div>
+          </div>
+          <div class="person-details">
+            <div class="detail-item">
+              <span class="detail-label">TC Kimlik No:</span>
+              <span class="detail-value">${person.TC || person.tc || '-'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Ad:</span>
+              <span class="detail-value">${person.ADI || person.ad || '-'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Soyad:</span>
+              <span class="detail-value">${person.SOYADI || person.soyad || '-'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Doğum Tarihi:</span>
+              <span class="detail-value">${person.DOGUMTARIHI || person.dogum_tarihi || '-'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Nüfus İli:</span>
+              <span class="detail-value">${person.NUFUSIL || person.il || '-'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Nüfus İlçesi:</span>
+              <span class="detail-value">${person.NUFUSILCE || person.ilce || '-'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Anne Adı:</span>
+              <span class="detail-value">${person.ANNEADI || person.anne_adi || '-'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Baba Adı:</span>
+              <span class="detail-value">${person.BABAADI || person.baba_adi || '-'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Uyruk:</span>
+              <span class="detail-value">${person.UYRUK || person.uyruk || '-'}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Sayfa yüklendiğinde ilk inputa focus
+      const firstInput = document.getElementById('ad');
+      if (firstInput) {
+        firstInput.focus();
+      }
+    });
+  </script>
+</body>
+  </html>
