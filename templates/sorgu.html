@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NEM Sorgu Paneli</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Önceki CSS kodları aynı kalacak, sadece eklemeler yapıldı */
+    
+    /* Yeni eklenen stiller */
+    .person-card {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid var(--glass-border);
+      transition: all 0.3s ease;
+    }
+    
+    .person-card:hover {
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateY(-2px);
+    }
+    
+    .person-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .person-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary-light);
+    }
+    
+    .person-tc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      background: rgba(139, 92, 246, 0.2);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    
+    .person-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .detail-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+    
+    .detail-value {
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 500;
+    }
+    
+    .results-summary {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .summary-text {
+      color: #6ee7b7;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <!-- HTML yapısı aynı kalacak -->
+  
+  <script>
+    // API configuration ve diğer değişkenler aynı
+
+    // Display results in a formatted way - GÜNCELLENDİ
+    function displayResults(data) {
+      console.log('Gelen veri:', data);
+
+      if (!data.success) {
+        resultDiv.innerHTML = `
+          <div class="error-message">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>Sorgu Başarısız</h3>
+            <p>${data.error || 'Bilinmeyen bir hata oluştu.'}</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Eğer response içinde Response objesi varsa (örnekteki gibi)
+      let results = data.data;
+      if (data.Response && data.Response.data) {
+        results = data.Response.data;
+      }
+
+      // Eğer sonuç yoksa
+      if (!results) {
+        resultDiv.innerHTML = `
+          <div class="success-message">
+            <i class="fas fa-check-circle"></i>
+            <h3>Sorgu Tamamlandı</h3>
+            <p>Sonuç bulunamadı.</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Response içinde data array'i varsa
+      if (results.data && Array.isArray(results.data)) {
+        results = results.data;
+      }
+
+      // String sonuçlar için
+      if (typeof results === 'string') {
+        resultDiv.innerHTML = `
+          <div class="success-message">
+            <i class="fas fa-check-circle"></i>
+            <h3>Sorgu Tamamlandı</h3>
+            <div class="json-result">
+              <pre>${escapeHtml(results)}</pre>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // Array sonuçlar için - GÜNCELLENDİ
+      if (Array.isArray(results)) {
+        if (results.length === 0) {
+          resultDiv.innerHTML = `
+            <div class="success-message">
+              <i class="fas fa-check-circle"></i>
+              <h3>Sorgu Tamamlandı</h3>
+              <p>Sonuç bulunamadı.</p>
+            </div>
+          `;
+          return;
+        }
+
+        let html = '';
+        
+        // Toplam sonuç sayısını göster
+        html += `
+          <div class="results-summary">
+            <p class="summary-text">
+              <i class="fas fa-check-circle"></i>
+              ${results.length} sonuç bulundu
+            </p>
+          </div>
+        `;
+        
+        // Her bir kişi için kart oluştur
+        results.forEach((person, index) => {
+          html += renderPersonCard(person, index + 1);
+        });
+        
+        resultDiv.innerHTML = html;
+        return;
+      }
+
+      // Object sonuçlar için
+      if (typeof results === 'object') {
+        resultDiv.innerHTML = renderPersonCard(results, 1);
+        return;
+      }
+
+      // Diğer durumlar
+      resultDiv.innerHTML = `
+        <div class="success-message">
+          <i class="fas fa-check-circle"></i>
+          <h3>Sorgu Tamamlandı</h3>
+          <div class="json-result">
+            <pre>${JSON.stringify(results, null, 2)}</pre>
+          </div>
+        </div>
+      `;
+    }
+
+    // Kişi kartını render et - YENİ FONKSİYON
+    function renderPersonCard(person, index) {
+      // Alan adı eşleştirmeleri
+      const fieldMappings = {
+        'ADI': 'Ad',
+        'SOYADI': 'Soyad', 
+        'ANNEADI': 'Anne Adı',
+        'BABAADI': 'Baba Adı',
+        'DOGUMTARIHI': 'Doğum Tarihi',
+        'NUFUSIL': 'Nüfus İli',
+        'NUFUSILCE': 'Nüfus İlçesi',
+        'TC': 'TC Kimlik No',
+        'UYRUK': 'Uyruk',
+        'ANNETC': 'Anne TC',
+        'BABATC': 'Baba TC'
+      };
+
+      let html = `<div class="person-card">`;
+      
+      // Kart başlığı
+      const name = person.ADI || person.ad || '-';
+      const surname = person.SOYADI || person.soyad || '-';
+      const tc = person.TC || person.tc || '-';
+      
+      html += `
+        <div class="person-header">
+          <div class="person-name">${index}. ${escapeHtml(name)} ${escapeHtml(surname)}</div>
+          <div class="person-tc">${escapeHtml(tc)}</div>
+        </div>
+      `;
+      
+      // Kişi detayları
+      html += `<div class="person-details">`;
+      
+      // Tüm alanları düzenli şekilde göster
+      Object.keys(fieldMappings).forEach(key => {
+        if (person[key] !== null && person[key] !== undefined && person[key] !== '') {
+          const displayValue = String(person[key]);
+          if (displayValue !== 'null' && displayValue.trim() !== '') {
+            html += `
+              <div class="detail-item">
+                <span class="detail-label">${fieldMappings[key]}:</span>
+                <span class="detail-value">${escapeHtml(displayValue)}</span>
+              </div>
+            `;
+          }
+        }
+      });
+      
+      // Eşleşmeyen diğer alanları göster
+      Object.keys(person).forEach(key => {
+        if (!fieldMappings[key] && 
+            person[key] !== null && 
+            person[key] !== undefined && 
+            person[key] !== '' &&
+            key !== 'id' && // id alanını gizle
+            String(person[key]) !== 'null') {
+          
+          const displayValue = String(person[key]);
+          if (displayValue.trim() !== '') {
+            html += `
+              <div class="detail-item">
+                <span class="detail-label">${formatFieldName(key)}:</span>
+                <span class="detail-value">${escapeHtml(displayValue)}</span>
+              </div>
+            `;
+          }
+        }
+      });
+      
+      html += `</div></div>`;
+      return html;
+    }
+
+    // Alan adlarını daha okunabilir hale getir
+    function formatFieldName(fieldName) {
+      const fieldMap = {
+        'tc': 'TC Kimlik No',
+        'ad': 'Ad',
+        'soyad': 'Soyad',
+        'dogum_tarihi': 'Doğum Tarihi',
+        'cinsiyet': 'Cinsiyet',
+        'uyruk': 'Uyruk',
+        'telefon': 'Telefon',
+        'gsm': 'GSM',
+        'email': 'E-posta',
+        'adres': 'Adres',
+        'anne_adi': 'Anne Adı',
+        'baba_adi': 'Baba Adı',
+        'es_adi': 'Eş Adı',
+        'cocuk_sayisi': 'Çocuk Sayısı',
+        'plaka': 'Plaka',
+        'domain': 'Domain',
+        'ip': 'IP Adresi',
+        'kullanici_adi': 'Kullanıcı Adı',
+        'okul_no': 'Okul No',
+        'vergi_no': 'Vergi No',
+        'imei': 'IMEI',
+        'il': 'İl',
+        'ilce': 'İlçe',
+        'mahalle': 'Mahalle',
+        'sokak': 'Sokak',
+        'bina_no': 'Bina No',
+        'daire_no': 'Daire No',
+        'ADI': 'Ad',
+        'SOYADI': 'Soyad',
+        'ANNEADI': 'Anne Adı',
+        'BABAADI': 'Baba Adı',
+        'DOGUMTARIHI': 'Doğum Tarihi',
+        'NUFUSIL': 'Nüfus İli',
+        'NUFUSILCE': 'Nüfus İlçesi',
+        'TC': 'TC Kimlik No',
+        'UYRUK': 'Uyruk',
+        'ANNETC': 'Anne TC',
+        'BABATC': 'Baba TC'
+      };
+      
+      return fieldMap[fieldName] || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    // HTML escape function
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Geri kalan kodlar aynı...
+  </script>
+</body>
+</html>
