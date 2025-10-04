@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NEM Sorgu Paneli</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#0f0f23;color:#f8fafc;padding:20px;min-height:100vh}
+    .container{max-width:1200px;margin:0 auto}
+    .header{display:flex;justify-content:space-between;align-items:center;padding:18px 0;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:22px}
+    .logo-text{font-weight:800;color:#8b5cf6;font-size:22px}
+    .btn{display:inline-flex;gap:8px;align-items:center;padding:8px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:600}
+    .btn-primary{background:#8b5cf6;color:#fff}
+    .btn-secondary{background:rgba(255,255,255,0.06);color:#fff}
+    .card{background:#1a1b2f;border-radius:14px;padding:20px;border:1px solid rgba(255,255,255,0.04);margin-bottom:18px}
+    .label{color:#cbd5e1;font-weight:700;margin-bottom:6px;display:block}
+    .input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:#fff}
+    .small{color:#9ca3af;font-size:13px;margin-top:6px}
+    .params-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+    .results{margin-top:12px}
+    .loading{display:flex;align-items:center;gap:12px;color:#cbd5e1}
+    pre.json{background:rgba(0,0,0,0.45);padding:12px;border-radius:8px;overflow:auto;color:#d1d5db;max-height:320px}
+    .person-card{background:rgba(255,255,255,0.03);border-radius:10px;padding:12px;margin-bottom:10px}
+    .error{background:rgba(239,68,68,0.06);padding:12px;border-radius:8px;color:#fca5a5}
+    .success{background:rgba(16,185,129,0.06);padding:12px;border-radius:8px;color:#6ee7b7}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo-text">NEM Sorgu</div>
+      <div>
+        <a href="/panel" class="btn btn-secondary"><i class="fas fa-arrow-left"></i>Panele Dön</a>
+        <a href="/" class="btn btn-primary"><i class="fas fa-home"></i>Ana Sayfa</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="card" id="queryCard">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <div>
+            <h3 id="titleMain" style="margin-bottom:6px">Sorgu</h3>
+            <div class="small" id="subtitle">Sunucudan API listesi bekleniyor...</div>
+          </div>
+
+          <div style="min-width:260px">
+            <label class="label">API Seç</label>
+            <select id="apiSelect" class="input"></select>
+          </div>
+        </div>
+
+        <form id="queryForm" style="margin-top:14px">
+          <div id="paramsArea" class="params-grid">
+            <!-- Dinamik input'lar buraya gelecek -->
+          </div>
+
+          <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Sorguyu Başlat</button>
+            <button type="button" id="clearBtn" class="btn btn-secondary">Temizle</button>
+            <div id="keyArea" style="margin-left:auto"></div>
+          </div>
+        </form>
+      </section>
+
+      <section class="card results" id="resultsCard">
+        <h4>Sorgu Sonuçları</h4>
+        <div id="resultBody">
+          <div class="loading" id="defaultState"><div style="width:36px;height:36px;border:3px solid rgba(139,92,246,0.25);border-top:3px solid #8b5cf6;border-radius:50%;animation:spin 1s linear infinite"></div><div>Sorgu sonuçları burada görünecek</div></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // güvenlik: basit escape
+    function esc(s){ if(s===null||s===undefined) return ''; return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
+
+    // sessionStorage key
+    const STORAGE_KEY = 'nem_api_key';
+
+    // DOM elemanları
+    const apiSelect = document.getElementById('apiSelect');
+    const paramsArea = document.getElementById('paramsArea');
+    const subtitle = document.getElementById('subtitle');
+    const keyArea = document.getElementById('keyArea');
+    const resultBody = document.getElementById('resultBody');
+    const defaultState = document.getElementById('defaultState');
+
+    // helper: parse "a, b" -> ['a','b']
+    function parseParams(s){ if(!s) return []; return s.split(',').map(x=>x.trim()).filter(x=>x); }
+
+    // sunucudan API listesi al
+    async function loadApis(tryKey=null){
+      subtitle.textContent = 'Sunucudan API listesi yükleniyor...';
+      // eğer tryKey verilmişse query param ile gönder (güvenli olarak)
+      let url = '/api/list';
+      let opts = { method:'GET' };
+      // önce oturumlu çağrı dene (credentials include)
+      try {
+        let res = await fetch(url, { method:'GET', credentials:'include' });
+        if(res.status === 200){
+          const j = await res.json();
+          if(j.apis) { setupApis(j.apis); subtitle.textContent = 'API listesi sunucudan yüklendi (oturum).'; setKeyUI(false); return; }
+        } else if(res.status === 401){
+          // fallback: eğer session değilse, key ile denenecek (sessionStorage veya tryKey)
+        }
+      } catch(e){
+        console.warn('oturumlu /api/list hatası', e);
+      }
+
+      // oturum başarısızsa: dene sessionStorage'daki key ile
+      const stored = tryKey || sessionStorage.getItem(STORAGE_KEY);
+      if(stored){
+        try {
+          let res2 = await fetch('/api/list', { method:'GET', headers:{'X-API-KEY': stored} });
+          if(res2.status === 200){
+            const j2 = await res2.json();
+            if(j2.apis){ setupApis(j2.apis); subtitle.textContent = 'API listesi alındı (X-API-KEY).'; setKeyUI(true, stored); return; }
+          }
+        } catch(e){ console.warn('key ile /api/list hata', e); }
+      }
+
+      // hala alınamadı: göster ve key iste
+      subtitle.textContent = 'API listesi alınamadı — lütfen API key gir (admin -> /admin/generate).';
+      renderKeyInput();
+    }
+
+    function setKeyUI(hasKey, key){
+      keyArea.innerHTML = '';
+      if(hasKey){
+        const span = document.createElement('div');
+        span.className = 'small';
+        span.textContent = 'API key kullanılıyor (sessionStorage).';
+        keyArea.appendChild(span);
+      } else {
+        const span = document.createElement('div');
+        span.className = 'small';
+        span.textContent = '';
+        keyArea.appendChild(span);
+      }
+    }
+
+    function renderKeyInput(){
+      keyArea.innerHTML = '';
+      const inp = document.createElement('input');
+      inp.placeholder = 'API key (panel -> admin -> generate)';
+      inp.className = 'input';
+      inp.style.width = '320px';
+      inp.id = 'manualApiKey';
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-primary';
+      btn.textContent = 'Key ile Yükle';
+      btn.style.marginLeft = '8px';
+      btn.addEventListener('click', async ()=>{
+        const k = document.getElementById('manualApiKey').value.trim();
+        if(!k) return alert('Key gir');
+        // kaydet sessionStorage'a (kullanıcı isterse)
+        sessionStorage.setItem(STORAGE_KEY, k);
+        subtitle.textContent = 'Key ile kontrol ediliyor...';
+        await loadApis(k);
+      });
+      const wrap = document.createElement('div');
+      wrap.style.display='flex';
+      wrap.style.gap='8px';
+      wrap.appendChild(inp);
+      wrap.appendChild(btn);
+      keyArea.appendChild(wrap);
+    }
+
+    // APIS geldikten sonra select doldur ve ilk param render
+    let APIS = [];
+    function setupApis(apis){
+      APIS = apis;
+      apiSelect.innerHTML = '';
+      apis.forEach(a=>{
+        const opt = document.createElement('option');
+        opt.value = a.ad;
+        opt.textContent = a.ad + (a.params ? ` — (${a.params})` : '');
+        apiSelect.appendChild(opt);
+      });
+      // otomatik ilkini render et
+      renderParamsFor(apiSelect.value);
+      apiSelect.addEventListener('change', ()=> renderParamsFor(apiSelect.value));
+    }
+
+    // param input'larını oluştur
+    function renderParamsFor(name){
+      paramsArea.innerHTML = '';
+      const api = APIS.find(x=>x.ad===name);
+      if(!api){ document.getElementById('titleMain').textContent = 'Sorgu'; return; }
+      document.getElementById('titleMain').textContent = api.ad + ' Sorgusu';
+      const params = parseParams(api.params);
+      if(params.length===0){
+        const info = document.createElement('div'); info.className='small'; info.textContent='Bu API için parametre gerekmiyor.';
+        paramsArea.appendChild(info);
+        return;
+      }
+      params.forEach(p=>{
+        const key = p.replaceAll(' ','_');
+        const div = document.createElement('div');
+        const label = document.createElement('label'); label.className='label'; label.textContent = p;
+        const input = document.createElement('input'); input.className='input'; input.id = `param_${key}`; input.name = key; input.placeholder = p;
+        const hint = document.createElement('div'); hint.className='small';
+        if(p.toLowerCase().includes('tc')) hint.textContent = '11 haneli TC giriniz';
+        else if(p.toLowerCase().includes('plaka')) hint.textContent = 'TR plaka örn: 34ABC34 veya 34';
+        else if(p.toLowerCase().includes('domain')) hint.textContent = 'example.com';
+        div.appendChild(label); div.appendChild(input); if(hint.textContent) div.appendChild(hint);
+        paramsArea.appendChild(div);
+      });
+    }
+
+    // sonuç gösterici
+    function showError(msg){ resultBody.innerHTML = `<div class="error"><i class="fas fa-exclamation-triangle"></i> ${esc(msg)}</div>`; }
+    function showSuccessHtml(html){ resultBody.innerHTML = html; }
+    function addRawToggle(container, data){
+      const b = document.createElement('button'); b.className='btn btn-secondary'; b.textContent='Ham JSON Göster/Gizle';
+      const pre = document.createElement('pre'); pre.className='json'; pre.style.display='none'; pre.textContent = JSON.stringify(data,null,2);
+      b.onclick = ()=> pre.style.display = pre.style.display === 'none' ? 'block' : 'none';
+      container.appendChild(b); container.appendChild(pre);
+    }
+
+    // form submit
+    document.getElementById('queryForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const apiName = apiSelect.value;
+      const apiObj = APIS.find(a=>a.ad===apiName);
+      if(!apiObj) return alert('API seçin');
+      const params = parseParams(apiObj.params);
+      const payload = { api: apiName };
+      const missing = [];
+      params.forEach(p=>{
+        const key = p.replaceAll(' ','_');
+        const el = document.getElementById('param_'+key);
+        const val = el ? el.value.trim() : '';
+        if(!val) missing.push(p);
+        payload[key] = val;
+      });
+      if(missing.length) return alert('Gerekli alanları doldur: ' + missing.join(', '));
+
+      // yükleme göstergesi
+      resultBody.innerHTML = `<div class="loading"><div style="width:36px;height:36px;border:3px solid rgba(139,92,246,0.25);border-top:3px solid #8b5cf6;border-radius:50%;animation:spin 1s linear infinite"></div><div>Sorgu yapılıyor...</div></div>`;
+
+      try {
+        const res = await fetch('/api/sorgu', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+          credentials: 'include' // oturum tabanlı auth gerekli
+        });
+        if(res.status === 401){
+          showError('Not authenticated — önce panele giriş yapın.');
+          return;
+        }
+        const j = await res.json();
+        if(!j.success){
+          showError(j.error || 'Sorgu başarısız');
+          // ham json toggle
+          addRawToggle(resultBody, j);
+          return;
+        }
+        // başarı: data göster
+        const data = j.data;
+        // basit render: array ise Sonuç 1/2, object ise tek
+        let html = '';
+        if(Array.isArray(data)){
+          data.forEach((item,i)=>{
+            html += `<div class="person-card"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><strong>Sonuç ${i+1}</strong><small>${esc(item.TC||item.tc||'')}</small></div><pre class="json">${esc(JSON.stringify(item,null,2))}</pre></div>`;
+          });
+        } else if(typeof data === 'object' && data !== null){
+          html = `<div class="person-card"><pre class="json">${esc(JSON.stringify(data,null,2))}</pre></div>`;
+        } else {
+          html = `<div class="success">${esc(String(data))}</div>`;
+        }
+        showSuccessHtml(html);
+        addRawToggle(resultBody, j);
+      } catch(err){
+        showError('API bağlantı hatası: ' + (err.message || err));
+      }
+    });
+
+    // clear
+    document.getElementById('clearBtn').addEventListener('click', ()=>{
+      document.getElementById('queryForm').reset();
+      paramsArea.innerHTML = '';
+      if(APIS.length) renderParamsFor(apiSelect.value);
+      resultBody.innerHTML = defaultState.outerHTML;
+    });
+
+    // başlangıç: önce sunucudan dene
+    loadApis();
+
+    // döndürme anim keyframes ekle (JS ile)
+    (function addSpinKeyframe(){
+      const s = document.createElement('style');
+      s.innerHTML = '@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}';
+      document.head.appendChild(s);
+    })();
+  </script>
+</body>
+  </html>
