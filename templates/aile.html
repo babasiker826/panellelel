@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aile Sorgulama - NABI SYSTEM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
+        /* KIRMIZI 3D ANİMASYON */
+        #red-animation-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            display: block;
+            pointer-events: none;
+            opacity: 0.85;
+            transition: opacity .6s ease;
+            will-change: transform;
+        }
+
+        body {
+            background: #151520;
+            color: #c5c7d6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .welcome-text {
+            font-size: 36px;
+            font-weight: bold;
+            color: #ff4dff;
+            text-shadow:
+                0 0 6px rgba(255, 77, 255, 0.95),
+                0 0 14px rgba(255, 77, 255, 0.8),
+                0 0 28px rgba(142, 45, 255, 0.6),
+                0 6px 30px rgba(20, 0, 40, 0.45);
+            text-align: center;
+            line-height: 1.2;
+            white-space: pre-line;
+        }
+        .welcome-wrap {
+            position: relative;
+            display: inline-block;
+            padding: 12px 18px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+        .welcome-wrap .glass-box {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(8px) saturate(120%);
+            -webkit-backdrop-filter: blur(8px) saturate(120%);
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 8px 20px rgba(2,6,23,0.45);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .form-container {
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(12px) saturate(140%);
+            -webkit-backdrop-filter: blur(12px) saturate(140%);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 18px 40px rgba(2,6,23,0.6);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #e6f9ff;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #ff4dff;
+            box-shadow: 0 0 0 2px rgba(255, 77, 255, 0.2);
+        }
+
+        .btn-sorgula {
+            background: linear-gradient(180deg,#ff4d4d,#ff1a1a);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-sorgula:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255, 0, 0, 0.3);
+        }
+
+        .btn-sorgula:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-container {
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(12px) saturate(140%);
+            -webkit-backdrop-filter: blur(12px) saturate(140%);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 18px 40px rgba(2,6,23,0.6);
+        }
+
+        .result-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff4dff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .result-table th {
+            background: rgba(255, 77, 255, 0.1);
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #ff4dff;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .result-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .result-table tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .btn-copy {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-copy:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid #ff4dff;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+
+        .success-message {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #6bff6b;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.05);
+            color: #e6f9ff;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-2px);
+        }
+
+        .__vip_blob { position: fixed; border-radius: 50%; opacity: 0.09; filter: blur(18px); z-index: -1; pointer-events: none; }
+        .__vip_blob.a { width:480px; height:480px; left:-140px; top:-100px; background:linear-gradient(90deg,#ff0000,#ff6b6b); animation:__vip_floatA 18s ease-in-out infinite; }
+        .__vip_blob.b { width:320px; height:320px; right:-120px; bottom:-120px; background:linear-gradient(90deg,#ff4757,#ff3838); animation:__vip_floatB 20s ease-in-out infinite; }
+        @keyframes __vip_floatA { 0%{transform:translate(0,0)}50%{transform:translate(18px,26px)}100%{transform:translate(0,0)} }
+        @keyframes __vip_floatB { 0%{transform:translate(0,0)}50%{transform:translate(-18px,-26px)}100%{transform:translate(0,0)} }
+
+        .json-result {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .family-relation {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            background: rgba(255, 77, 255, 0.2);
+            color: #ff4dff;
+        }
+    </style>
+</head>
+<body>
+    <!-- KIRMIZI 3D ANİMASYON -->
+    <canvas id="red-animation-canvas" aria-hidden="true"></canvas>
+
+    <div class="__vip_blob a" aria-hidden="true"></div>
+    <div class="__vip_blob b" aria-hidden="true"></div>
+
+    <div class="container">
+        <div class="welcome-wrap">
+            <div class="glass-box" aria-hidden="true"></div>
+            <div class="welcome-text">
+                NABI SYSTEM🌱
+                Aile Sorgulama
+            </div>
+        </div>
+
+        <div class="form-container">
+            <form id="sorgu-form">
+                <div class="form-group">
+                    <label for="tc">TC Kimlik No</label>
+                    <input type="text" id="tc" name="tc" placeholder="TC kimlik numarasını girin" required 
+                           pattern="[0-9]{11}" maxlength="11" minlength="11">
+                    <small style="color: #888; font-size: 12px; margin-top: 5px; display: block;">
+                        11 haneli TC kimlik numarası
+                    </small>
+                </div>
+                
+                <button type="submit" class="btn-sorgula" id="sorgula-btn">
+                    <i class="fas fa-users"></i> Aile Bilgilerini Sorgula
+                </button>
+            </form>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <div>Aile bilgileri sorgulanıyor...</div>
+        </div>
+
+        <div id="result-section" style="display: none;">
+            <div class="result-container">
+                <div class="result-title">Aile Sorgu Sonuçları</div>
+                <div id="api-result" class="json-result">
+                    <!-- API'den gelen ham sonuç burada gösterilecek -->
+                </div>
+            </div>
+
+            <div class="result-container" id="parsed-results" style="display: none;">
+                <div class="result-title">Aile Üyeleri</div>
+                <div class="table-container">
+                    <table class="result-table" id="main-table">
+                        <thead>
+                            <tr>
+                                <th>Kopyala</th>
+                                <th>Yakınlık</th>
+                                <th>TC</th>
+                                <th>Ad</th>
+                                <th>Soyad</th>
+                                <th>Doğum Tarihi</th>
+                                <th>Anne Adı</th>
+                                <th>Baba Adı</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Parsed results will be here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="error-section" class="error-message" style="display: none;">
+            <!-- Hata mesajları burada gösterilecek -->
+        </div>
+
+        <div class="nav-buttons">
+            <a href="operator.html" class="nav-btn"><i class="fas fa-arrow-left"></i> Operatör Sorgu</a>
+            <a href="panel.html" class="nav-btn"><i class="fas fa-home"></i> Panele Dön</a>
+            <a href="aile-pro.html" class="nav-btn">Aile PRO Sorgu <i class="fas fa-arrow-right"></i></a>
+        </div>
+    </div>
+
+    <script>
+        // Form işleme - GERÇEK API İSTEĞİ
+        document.getElementById('sorgu-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const tc = document.getElementById('tc').value.trim();
+            
+            // TC format kontrolü
+            const tcRegex = /^[0-9]{11}$/;
+            if (!tcRegex.test(tc)) {
+                showError('Lütfen geçerli bir TC kimlik numarası girin! (11 haneli)');
+                return;
+            }
+            
+            // Loading göster
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result-section').style.display = 'none';
+            document.getElementById('error-section').style.display = 'none';
+            document.getElementById('parsed-results').style.display = 'none';
+            
+            try {
+                // GERÇEK API İSTEĞİ
+                const response = await fetch('/api/sorgu', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        api: 'Aile Sorgulama',
+                        tc: tc
+                    })
+                });
+
+                const result = await response.json();
+
+                // Sonuçları göster
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('result-section').style.display = 'block';
+                
+                // Ham API sonucunu göster
+                document.getElementById('api-result').textContent = JSON.stringify(result, null, 2);
+                
+                if (result.success) {
+                    // Başarılı sonuç
+                    showSuccess('Aile sorgulama başarılı!');
+                    
+                    // Eğer data varsa, tabloya parse et
+                    if (result.data) {
+                        parseAndDisplayResults(result.data);
+                    }
+                } else {
+                    // Hata durumu
+                    showError(result.error || 'Sorgulama sırasında bir hata oluştu');
+                }
+                
+            } catch (error) {
+                // Network hatası
+                document.getElementById('loading').style.display = 'none';
+                showError('Network hatası: ' + error.message);
+            }
+        });
+
+        function parseAndDisplayResults(data) {
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = '';
+            
+            let results = [];
+            
+            // API yanıtına göre veriyi işle
+            if (Array.isArray(data)) {
+                results = data;
+            } else if (typeof data === 'object' && data !== null) {
+                results = [data];
+            }
+            
+            if (results.length === 0) {
+                showError('Bu TC numarasına ait aile bilgisi bulunamadı');
+                return;
+            }
+            
+            results.forEach(item => {
+                const row = document.createElement('tr');
+                
+                // Kopyala butonu
+                const copyCell = document.createElement('td');
+                const copyButton = document.createElement('button');
+                copyButton.className = 'btn-copy';
+                copyButton.innerHTML = '<i class="fas fa-copy"></i> Kopyala';
+                copyButton.onclick = function() {
+                    const textToCopy = `Yakınlık: ${item.yakinlik || '-'} | TC: ${item.tc || '-'} | Ad: ${item.ad || '-'} | Soyad: ${item.soyad || '-'} | Doğum: ${item.dogumTarihi || '-'}`;
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        copyButton.innerHTML = '<i class="fas fa-check"></i> Kopyalandı!';
+                        setTimeout(() => {
+                            copyButton.innerHTML = '<i class="fas fa-copy"></i> Kopyala';
+                        }, 2000);
+                    });
+                };
+                copyCell.appendChild(copyButton);
+                row.appendChild(copyCell);
+                
+                // Yakınlık
+                const yakinlikCell = document.createElement('td');
+                yakinlikCell.innerHTML = `<span class="family-relation">${item.yakinlik || item.relation || 'BİREY'}</span>`;
+                row.appendChild(yakinlikCell);
+                
+                // TC
+                const tcCell = document.createElement('td');
+                tcCell.textContent = item.tc || '-';
+                row.appendChild(tcCell);
+                
+                // Ad
+                const adCell = document.createElement('td');
+                adCell.textContent = item.ad || item.adi || item.name || '-';
+                row.appendChild(adCell);
+                
+                // Soyad
+                const soyadCell = document.createElement('td');
+                soyadCell.textContent = item.soyad || item.soyadi || item.surname || '-';
+                row.appendChild(soyadCell);
+                
+                // Doğum Tarihi
+                const dogumCell = document.createElement('td');
+                dogumCell.textContent = item.dogumTarihi || item.dogum || item.birthDate || '-';
+                row.appendChild(dogumCell);
+                
+                // Anne Adı
+                const anneCell = document.createElement('td');
+                anneCell.textContent = item.anneAdi || item.anne || item.motherName || '-';
+                row.appendChild(anneCell);
+                
+                // Baba Adı
+                const babaCell = document.createElement('td');
+                babaCell.textContent = item.babaAdi || item.baba || item.fatherName || '-';
+                row.appendChild(babaCell);
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Parse edilmiş sonuçları göster
+            document.getElementById('parsed-results').style.display = 'block';
+        }
+
+        function showError(message) {
+            const errorSection = document.getElementById('error-section');
+            errorSection.style.display = 'block';
+            errorSection.innerHTML = `<strong>Hata:</strong> ${message}`;
+        }
+
+        function showSuccess(message) {
+            const errorSection = document.getElementById('error-section');
+            errorSection.style.display = 'block';
+            errorSection.className = 'success-message';
+            errorSection.innerHTML = `<strong>Başarılı:</strong> ${message}`;
+        }
+
+        // TC input formatı kontrolü
+        document.getElementById('tc').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 11) {
+                value = value.substring(0, 11);
+            }
+            e.target.value = value;
+        });
+
+        // Sayfa yüklendiğinde session kontrolü
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/user')
+                .then(response => response.json())
+                .then(user => {
+                    if (!user.logged_in) {
+                        window.location.href = '/login';
+                    }
+                })
+                .catch(error => {
+                    console.error('Kullanıcı kontrol hatası:', error);
+                    window.location.href = '/login';
+                });
+        });
+    </script>
+</body>
+</html>
