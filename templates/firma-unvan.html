@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Firma Ünvan Sorgulama - NABI SYSTEM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
+        /* KIRMIZI 3D ANİMASYON */
+        #red-animation-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            display: block;
+            pointer-events: none;
+            opacity: 0.85;
+            transition: opacity .6s ease;
+            will-change: transform;
+        }
+
+        body {
+            background: #151520;
+            color: #c5c7d6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .welcome-text {
+            font-size: 36px;
+            font-weight: bold;
+            color: #ff4dff;
+            text-shadow:
+                0 0 6px rgba(255, 77, 255, 0.95),
+                0 0 14px rgba(255, 77, 255, 0.8),
+                0 0 28px rgba(142, 45, 255, 0.6),
+                0 6px 30px rgba(20, 0, 40, 0.45);
+            text-align: center;
+            line-height: 1.2;
+            white-space: pre-line;
+        }
+        .welcome-wrap {
+            position: relative;
+            display: inline-block;
+            padding: 12px 18px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+        .welcome-wrap .glass-box {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(8px) saturate(120%);
+            -webkit-backdrop-filter: blur(8px) saturate(120%);
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 8px 20px rgba(2,6,23,0.45);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .form-container {
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(12px) saturate(140%);
+            -webkit-backdrop-filter: blur(12px) saturate(140%);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 18px 40px rgba(2,6,23,0.6);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #e6f9ff;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #ff4dff;
+            box-shadow: 0 0 0 2px rgba(255, 77, 255, 0.2);
+        }
+
+        .btn-sorgula {
+            background: linear-gradient(180deg,#ff4d4d,#ff1a1a);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-sorgula:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255, 0, 0, 0.3);
+        }
+
+        .btn-sorgula:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-container {
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(12px) saturate(140%);
+            -webkit-backdrop-filter: blur(12px) saturate(140%);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 18px 40px rgba(2,6,23,0.6);
+        }
+
+        .result-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff4dff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .result-table th {
+            background: rgba(255, 77, 255, 0.1);
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #ff4dff;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .result-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .result-table tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .btn-copy {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-copy:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid #ff4dff;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+
+        .success-message {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #6bff6b;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.05);
+            color: #e6f9ff;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-2px);
+        }
+
+        .__vip_blob { position: fixed; border-radius: 50%; opacity: 0.09; filter: blur(18px); z-index: -1; pointer-events: none; }
+        .__vip_blob.a { width:480px; height:480px; left:-140px; top:-100px; background:linear-gradient(90deg,#ff0000,#ff6b6b); animation:__vip_floatA 18s ease-in-out infinite; }
+        .__vip_blob.b { width:320px; height:320px; right:-120px; bottom:-120px; background:linear-gradient(90deg,#ff4757,#ff3838); animation:__vip_floatB 20s ease-in-out infinite; }
+        @keyframes __vip_floatA { 0%{transform:translate(0,0)}50%{transform:translate(18px,26px)}100%{transform:translate(0,0)} }
+        @keyframes __vip_floatB { 0%{transform:translate(0,0)}50%{transform:translate(-18px,-26px)}100%{transform:translate(0,0)} }
+
+        .json-result {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .company-info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .company-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status-active { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .status-passive { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .status-liquidated { background: rgba(128, 128, 128, 0.2); color: #808080; }
+
+        .company-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff4dff;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .company-partners {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .partner-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+
+        .partner-card:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateY(-2px);
+        }
+
+        .partner-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .partner-role {
+            background: rgba(255, 77, 255, 0.2);
+            color: #ff4dff;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .financial-info {
+            background: rgba(139, 69, 19, 0.1);
+            border: 1px solid rgba(139, 69, 19, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- KIRMIZI 3D ANİMASYON -->
+    <canvas id="red-animation-canvas" aria-hidden="true"></canvas>
+
+    <div class="__vip_blob a" aria-hidden="true"></div>
+    <div class="__vip_blob b" aria-hidden="true"></div>
+
+    <div class="container">
+        <div class="welcome-wrap">
+            <div class="glass-box" aria-hidden="true"></div>
+            <div class="welcome-text">
+                NABI SYSTEM🌱
+                Firma Ünvan Sorgulama
+            </div>
+        </div>
+
+        <div class="form-container">
+            <form id="sorgu-form">
+                <div class="form-group">
+                    <label for="unvan">Firma Ünvanı</label>
+                    <input type="text" id="unvan" name="unvan" placeholder="Firma ünvanını girin" required>
+                    <small style="color: #888; font-size: 12px; margin-top: 5px; display: block;">
+                        Firma adı, şirket ünvanı veya ticari unvan
+                    </small>
+                </div>
+                
+                <button type="submit" class="btn-sorgula" id="sorgula-btn">
+                    <i class="fas fa-building"></i> Firma Bilgilerini Sorgula
+                </button>
+            </form>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <div>Firma bilgileri sorgulanıyor...</div>
+        </div>
+
+        <div id="result-section" style="display: none;">
+            <div class="result-container">
+                <div class="result-title">Firma Sorgu Sonuçları</div>
+                <div id="api-result" class="json-result">
+                    <!-- API'den gelen ham sonuç burada gösterilecek -->
+                </div>
+            </div>
+
+            <div class="result-container" id="parsed-results" style="display: none;">
+                <div class="company-info" id="company-info">
+                    <!-- Firma bilgileri burada gösterilecek -->
+                </div>
+
+                <div class="company-stats" id="company-stats">
+                    <!-- Firma istatistikleri burada gösterilecek -->
+                </div>
+
+                <div class="financial-info" id="financial-info">
+                    <!-- Finansal bilgiler burada gösterilecek -->
+                </div>
+
+                <div id="partners-container">
+                    <!-- Ortaklar bilgisi burada gösterilecek -->
+                </div>
+
+                <div class="result-title">Detaylı Firma Bilgileri</div>
+                <div class="table-container">
+                    <table class="result-table" id="main-table">
+                        <thead>
+                            <tr>
+                                <th>Kopyala</th>
+                                <th>Bilgi Türü</th>
+                                <th>Değer</th>
+                                <th>Açıklama</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Parsed results will be here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="error-section" class="error-message" style="display: none;">
+            <!-- Hata mesajları burada gösterilecek -->
+        </div>
+
+        <div class="nav-buttons">
+            <a href="vergi-no.html" class="nav-btn"><i class="fas fa-arrow-left"></i> Vergi No Sorgu</a>
+            <a href="panel.html" class="nav-btn"><i class="fas fa-home"></i> Panele Dön</a>
+            <a href="sgk.html" class="nav-btn">SGK Sorgu <i class="fas fa-arrow-right"></i></a>
+        </div>
+    </div>
+
+    <script>
+        // Form işleme - GERÇEK API İSTEĞİ
+        document.getElementById('sorgu-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const unvan = document.getElementById('unvan').value.trim();
+            
+            if (!unvan) {
+                showError('Lütfen firma ünvanı girin!');
+                return;
+            }
+            
+            if (unvan.length < 3) {
+                showError('Firma ünvanı en az 3 karakter olmalıdır!');
+                return;
+            }
+            
+            // Loading göster
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result-section').style.display = 'none';
+            document.getElementById('error-section').style.display = 'none';
+            document.getElementById('parsed-results').style.display = 'none';
+            
+            try {
+                // GERÇEK API İSTEĞİ
+                const response = await fetch('/api/sorgu', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        api: 'Firma Ünvan Sorgulama',
+                        unvan: unvan
+                    })
+                });
+
+                const result = await response.json();
+
+                // Sonuçları göster
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('result-section').style.display = 'block';
+                
+                // Ham API sonucunu göster
+                document.getElementById('api-result').textContent = JSON.stringify(result, null, 2);
+                
+                if (result.success) {
+                    // Başarılı sonuç
+                    showSuccess('Firma sorgulama başarılı!');
+                    
+                    // Eğer data varsa, tabloya parse et
+                    if (result.data) {
+                        parseAndDisplayResults(result.data, unvan);
+                    }
+                } else {
+                    // Hata durumu
+                    showError(result.error || 'Sorgulama sırasında bir hata oluştu');
+                }
+                
+            } catch (error) {
+                // Network hatası
+                document.getElementById('loading').style.display = 'none';
+                showError('Network hatası: ' + error.message);
+            }
+        });
+
+        function parseAndDisplayResults(data, unvan) {
+            const tableBody = document.getElementById('table-body');
+            const companyStats = document.getElementById('company-stats');
+            const financialInfo = document.getElementById('financial-info');
+            const partnersContainer = document.getElementById('partners-container');
+            tableBody.innerHTML = '';
+            companyStats.innerHTML = '';
+            financialInfo.innerHTML = '';
+            partnersContainer.innerHTML = '';
+            
+            let results = [];
+            
+            // API yanıtına göre veriyi işle
+            if (Array.isArray(data)) {
+                results = data;
+            } else if (typeof data === 'object' && data !== null) {
+                results = [data];
+            }
+            
+            if (results.length === 0) {
+                showError('Bu ünvana sahip firma bulunamadı');
+                return;
+            }
+            
+            const companyData = results[0];
+            
+            // Firma durumunu belirle
+            let statusClass = 'status-active';
+            let statusText = 'AKTİF';
+            if (companyData.firmaDurumu === 'PASİF') {
+                statusClass = 'status-passive';
+                statusText = 'PASİF';
+            } else if (companyData.firmaDurumu === 'TASFİYE') {
+                statusClass = 'status-liquidated';
+                statusText = 'TASFİYE';
+            }
+            
+            // Firma bilgilerini göster
+            const companyInfo = document.getElementById('company-info');
+            companyInfo.innerHTML = `
+                <strong>Firma Bilgileri:</strong><br>
+                Ünvan: <strong style="color: #ff4dff;">${unvan}</strong><br>
+                Vergi No: ${companyData.vergiNo || companyData.taxNumber || '-'} | 
+                Ticaret Sicil No: ${companyData.ticaretSicilNo || companyData.tradeRegistryNumber || '-'}<br>
+                Firma Tipi: ${companyData.firmaTipi || companyData.companyType || '-'} | 
+                Durum: <span class="company-status ${statusClass}">${statusText}</span>
+            `;
+            
+            // Firma istatistiklerini oluştur
+            const stats = [
+                { label: 'Kuruluş Yılı', value: companyData.kurulusYili || '-', icon: 'calendar-alt' },
+                { label: 'Çalışan Sayısı', value: companyData.calisanSayisi || '-', icon: 'users' },
+                { label: 'Şube Sayısı', value: companyData.subeSayisi || '1', icon: 'code-branch' },
+                { label: 'Sermaye', value: formatCurrency(companyData.sermaye), icon: 'money-bill-wave' }
+            ];
+            
+            stats.forEach(stat => {
+                const statCard = document.createElement('div');
+                statCard.className = 'stat-card';
+                statCard.innerHTML = `
+                    <i class="fas fa-${stat.icon}" style="font-size: 24px; color: #ff4dff; margin-bottom: 10px;"></i>
+                    <div class="stat-value">${stat.value}</div>
+                    <div class="stat-label">${stat.label}</div>
+                `;
+                companyStats.appendChild(statCard);
+            });
+            
+            // Finansal bilgileri göster
+            financialInfo.innerHTML = `
+                <strong>Finansal Bilgiler:</strong><br>
+                Son Yıl Ciro: ${formatCurrency(companyData.sonYilCiro)} | 
+                Kar/Zarar: ${formatCurrency(companyData.karZarar)}<br>
+                Öz Sermaye: ${formatCurrency(companyData.ozSermaye)} | 
+                Toplam Borç: ${formatCurrency(companyData.toplamBorc)}
+            `;
+            
+            // Ortaklar bilgisini göster
+            if (companyData.ortaklar && Array.isArray(companyData.ortaklar)) {
+                partnersContainer.innerHTML = '<div class="result-title">Ortaklar ve Yetkililer</div>';
+                const companyPartners = document.createElement('div');
+                companyPartners.className = 'company-partners';
+                
+                companyData.ortaklar.forEach((ortak) => {
+                    const partnerCard = document.createElement('div');
+                    partnerCard.className = 'partner-card';
+                    
+                    partnerCard.innerHTML = `
+                        <div class="partner-header">
+                            <div>
+                                <strong>${ortak.adSoyad || '-'}</strong>
+                                <div style="font-size: 12px; color: #888;">TC: ${ortak.tcKimlikNo || '-'}</div>
+                            </div>
+                            <span class="partner-role">${ortak.unvan || ortak.role || 'ORTAK'}</span>
+                        </div>
+                        <div style="margin: 10px 0;">
+                            <div style="font-size: 12px;">Hisse: ${ortak.hisseOrani || '0'}%</div>
+                            <div style="font-size: 12px;">Sermaye Payı: ${formatCurrency(ortak.sermayePayi)}</div>
+                        </div>
+                        <div style="font-size: 11px; color: #888;">
+                            ${ortak.gorev || ''}
+                        </div>
+                    `;
+                    companyPartners.appendChild(partnerCard);
+                });
+                
+                partnersContainer.appendChild(companyPartners);
+            }
+            
+            // Detaylı bilgileri tabloya ekle
+            const detailedInfo = [
+                { type: 'Firma Ünvanı', value: unvan, description: 'Sorgulanan firma ünvanı' },
+                { type: 'Vergi Numarası', value: companyData.vergiNo || companyData.taxNumber || '-', description: 'Firma vergi numarası' },
+                { type: 'Ticaret Sicil No', value: companyData.ticaretSicilNo || companyData.tradeRegistryNumber || '-', description: 'Ticaret sicil numarası' },
+                { type: 'Firma Tipi', value: companyData.firmaTipi || companyData.companyType || '-', description: 'Firma türü' },
+                { type: 'Firma Durumu', value: statusText, description: 'Firma faaliyet durumu' },
+                { type: 'Kuruluş Tarihi', value: companyData.kurulusTarihi || companyData.establishmentDate || '-', description: 'Kuruluş tarihi' },
+                { type: 'Kuruluş Yılı', value: companyData.kurulusYili || '-', description: 'Kuruluş yılı' },
+                { type: 'Sermaye', value: formatCurrency(companyData.sermaye), description: 'Kayıtlı sermaye' },
+                { type: 'Çalışan Sayısı', value: companyData.calisanSayisi || '-', description: 'Toplam çalışan sayısı' },
+                { type: 'Şube Sayısı', value: companyData.subeSayisi || '1', description: 'Toplam şube sayısı' },
+                { type: 'Ana Faaliyet', value: companyData.anaFaaliyet || companyData.mainActivity || '-', description: 'Ana faaliyet konusu' },
+                { type: 'İl', value: companyData.il || companyData.city || '-', description: 'Merkez il' },
+                { type: 'İlçe', value: companyData.ilce || companyData.district || '-', description: 'Merkez ilçe' },
+                { type: 'Adres', value: companyData.adres || companyData.address || '-', description: 'Firma adresi' },
+                { type: 'Telefon', value: companyData.telefon || companyData.phone || '-', description: 'İletişim telefonu' },
+                { type: 'E-posta', value: companyData.eposta || companyData.email || '-', description: 'İletişim e-posta' },
+                { type: 'Web Sitesi', value: companyData.website || companyData.webSite || '-', description: 'Web sitesi' }
+            ];
+            
+            detailedInfo.forEach(info => {
+                const row = document.createElement('tr');
+                
+                // Kopyala butonu
+                const copyCell = document.createElement('td');
+                const copyButton = document.createElement('button');
+                copyButton.className = 'btn-copy';
+                copyButton.innerHTML = '<i class="fas fa-copy"></i> Kopyala';
+                copyButton.onclick = function() {
+                    const textToCopy = `${info.type}: ${info.value}`;
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        copyButton.innerHTML = '<i class="fas fa-check"></i> Kopyalandı!';
+                        setTimeout(() => {
+                            copyButton.innerHTML = '<i class="fas fa-copy"></i> Kopyala';
+                        }, 2000);
+                    });
+                };
+                copyCell.appendChild(copyButton);
+                row.appendChild(copyCell);
+                
+                // Bilgi Türü
+                const typeCell = document.createElement('td');
+                typeCell.textContent = info.type;
+                row.appendChild(typeCell);
+                
+                // Değer
+                const valueCell = document.createElement('td');
+                valueCell.textContent = info.value;
+                row.appendChild(valueCell);
+                
+                // Açıklama
+                const descCell = document.createElement('td');
+                descCell.textContent = info.description;
+                row.appendChild(descCell);
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Parse edilmiş sonuçları göster
+            document.getElementById('parsed-results').style.display = 'block';
+        }
+
+        function formatCurrency(amount) {
+            if (!amount && amount !== 0) return '-';
+            return new Intl.NumberFormat('tr-TR', {
+                style: 'currency',
+                currency: 'TRY'
+            }).format(amount);
+        }
+
+        function showError(message) {
+            const errorSection = document.getElementById('error-section');
+            errorSection.style.display = 'block';
+            errorSection.innerHTML = `<strong>Hata:</strong> ${message}`;
+        }
+
+        function showSuccess(message) {
+            const errorSection = document.getElementById('error-section');
+            errorSection.style.display = 'block';
+            errorSection.className = 'success-message';
+            errorSection.innerHTML = `<strong>Başarılı:</strong> ${message}`;
+        }
+
+        // Sayfa yüklendiğinde session kontrolü
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/user')
+                .then(response => response.json())
+                .then(user => {
+                    if (!user.logged_in) {
+                        window.location.href = '/login';
+                    }
+                })
+                .catch(error => {
+                    console.error('Kullanıcı kontrol hatası:', error);
+                    window.location.href = '/login';
+                });
+        });
+    </script>
+</body>
+</html>
