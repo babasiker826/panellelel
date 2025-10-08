@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vesika Sorgulama (Hanedan) - NABI SYSTEM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
+        /* KIRMIZI 3D ANİMASYON */
+        #red-animation-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            display: block;
+            pointer-events: none;
+            opacity: 0.85;
+            transition: opacity .6s ease;
+            will-change: transform;
+        }
+
+        body {
+            background: #151520;
+            color: #c5c7d6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .welcome-text {
+            font-size: 36px;
+            font-weight: bold;
+            color: #ff4dff;
+            text-shadow:
+                0 0 6px rgba(255, 77, 255, 0.95),
+                0 0 14px rgba(255, 77, 255, 0.8),
+                0 0 28px rgba(142, 45, 255, 0.6),
+                0 6px 30px rgba(20, 0, 40, 0.45);
+            text-align: center;
+            line-height: 1.2;
+            white-space: pre-line;
+        }
+        .welcome-wrap {
+            position: relative;
+            display: inline-block;
+            padding: 12px 18px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+        .welcome-wrap .glass-box {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(8px) saturate(120%);
+            -webkit-backdrop-filter: blur(8px) saturate(120%);
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 8px 20px rgba(2,6,23,0.45);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .form-container {
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(12px) saturate(140%);
+            -webkit-backdrop-filter: blur(12px) saturate(140%);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 18px 40px rgba(2,6,23,0.6);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #e6f9ff;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #ff4dff;
+            box-shadow: 0 0 0 2px rgba(255, 77, 255, 0.2);
+        }
+
+        .btn-sorgula {
+            background: linear-gradient(180deg,#ff4d4d,#ff1a1a);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-sorgula:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255, 0, 0, 0.3);
+        }
+
+        .btn-sorgula:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-container {
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(12px) saturate(140%);
+            -webkit-backdrop-filter: blur(12px) saturate(140%);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 18px 40px rgba(2,6,23,0.6);
+        }
+
+        .result-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff4dff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .result-table th {
+            background: rgba(255, 77, 255, 0.1);
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #ff4dff;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .result-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .result-table tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .btn-copy {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-copy:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid #ff4dff;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+
+        .success-message {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #6bff6b;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.05);
+            color: #e6f9ff;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-2px);
+        }
+
+        .__vip_blob { position: fixed; border-radius: 50%; opacity: 0.09; filter: blur(18px); z-index: -1; pointer-events: none; }
+        .__vip_blob.a { width:480px; height:480px; left:-140px; top:-100px; background:linear-gradient(90deg,#ff0000,#ff6b6b); animation:__vip_floatA 18s ease-in-out infinite; }
+        .__vip_blob.b { width:320px; height:320px; right:-120px; bottom:-120px; background:linear-gradient(90deg,#ff4757,#ff3838); animation:__vip_floatB 20s ease-in-out infinite; }
+        @keyframes __vip_floatA { 0%{transform:translate(0,0)}50%{transform:translate(18px,26px)}100%{transform:translate(0,0)} }
+        @keyframes __vip_floatB { 0%{transform:translate(0,0)}50%{transform:translate(-18px,-26px)}100%{transform:translate(0,0)} }
+
+        .json-result {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .vesika-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff4dff;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .vesika-info {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .vesika-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status-valid { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .status-expired { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .status-suspended { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+
+        .document-history {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .history-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+
+        .history-card:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateY(-2px);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .history-type {
+            background: rgba(255, 77, 255, 0.2);
+            color: #ff4dff;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .personal-info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        /* VESİKA GÖRSEL STİLLERİ */
+        .vesika-image-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .vesika-frame {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255, 77, 255, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 25px rgba(255, 77, 255, 0.2);
+            max-width: 100%;
+            text-align: center;
+        }
+
+        .vesika-image {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .image-placeholder {
+            width: 400px;
+            height: 250px;
+            background: rgba(255,255,255,0.03);
+            border: 2px dashed rgba(255,255,255,0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-size: 16px;
+        }
+
+        .download-btn {
+            background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .image-info {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <!-- KIRMIZI 3D ANİMASYON -->
+    <canvas id="red-animation-canvas" aria-hidden="true"></canvas>
+
+    <div class="__vip_blob a" aria-hidden="true"></div>
+    <div class="__vip_blob b" aria-hidden="true"></div>
+
+    <div class="container">
+        <div class="welcome-wrap">
+            <div class="glass-box" aria-hidden="true"></div>
+            <div class="welcome-text">
+                NABI SYSTEM🌱
+                Vesika Sorgulama (Hanedan)
+            </div>
+        </div>
+
+        <div class="form-container">
+            <form id="sorgu-form">
+                <div class="form-group">
+                    <label for="tc">TC Kimlik No</label>
+                    <input type="text" id="tc" name="tc" placeholder="11 haneli TC kimlik numarası" required 
+                           pattern="[0-9]{11}" maxlength="11" minlength="11">
+                </div>
+                
+                <button type="submit" class="btn-sorgula" id="sorgula-btn">
+                    <i class="fas fa-id-card"></i> Vesika Bilgilerini Sorgula
+                </button>
+            </form>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <div>Vesika bilgileri sorgulanıyor...</div>
+        </div>
+
+        <div id="result-section" style="display: none;">
+            <div class="result-container">
+                <div class="result-title">Vesika Sorgu Sonuçları</div>
+                <div id="api-result" class="json-result">
+                    <!-- API'den gelen ham sonuç burada gösterilecek -->
+                </div>
+            </div>
+
+            <div class="result-container" id="parsed-results" style="display: none;">
+                <!-- VESİKA GÖRSEL BÖLÜMÜ -->
+                <div class="result-title">Vesika Görseli</div>
+                <div class="vesika-image-container">
+                    <div class="vesika-frame">
+                        <div id="vesika-image-placeholder" class="image-placeholder">
+                            <i class="fas fa-image" style="font-size: 48px; margin-bottom: 10px;"></i>
+                            <div>Vesika görseli yükleniyor...</div>
+                        </div>
+                        <img id="vesika-image" class="vesika-image" style="display: none;" alt="Vesika Görseli">
+                        <a id="download-btn" class="download-btn" style="display: none;" download="vesika.png">
+                            <i class="fas fa-download"></i> Görseli İndir
+                        </a>
+                        <div id="image-info" class="image-info" style="display: none;">
+                            <!-- Görsel bilgileri burada gösterilecek -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="personal-info" id="personal-info">
+                    <!-- Kişisel bilgiler burada gösterilecek -->
+                </div>
+
+                <div class="vesika-info" id="vesika-info">
+                    <!-- Vesika bilgileri burada gösterilecek -->
+                </div>
+
+                <div class="vesika-stats" id="vesika-stats">
+                    <!-- Vesika istatistikleri burada gösterilecek -->
+                </div>
+
+                <div id="history-container">
+                    <!-- Geçmiş bilgileri burada gösterilecek -->
+                </div>
+
+                <div class="result-title">Detaylı Vesika Bilgileri</div>
+                <div class="table-container">
+                    <table class="result-table" id="main-table">
+                        <thead>
+                            <tr>
+                                <th>Kopyala</th>
+                                <th>Bilgi Türü</th>
+                                <th>Değer</th>
+                                <th>Açıklama</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Parsed results will be here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="error-section" class="error-message" style="display: none;">
+            <!-- Hata mesajları burada gösterilecek -->
+        </div>
+
+        <div class="nav-buttons">
+            <a href="site-log.html" class="nav-btn"><i class="fas fa-arrow-left"></i> Site Log Sorgu</a>
+            <a href="panel.html" class="nav-btn"><i class="fas fa-home"></i> Panele Dön</a>
+            <a href="tapu.html" class="nav-btn">Tapu Sorgu <i class="fas fa-arrow-right"></i></a>
+        </div>
+    </div>
+
+    <script>
+        // Form işleme - GERÇEK API İSTEĞİ
+        document.getElementById('sorgu-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const tc = document.getElementById('tc').value.trim();
+            
+            if (!tc) {
+                showError('Lütfen TC kimlik numarasını girin!');
+                return;
+            }
+            
+            if (tc.length !== 11 || !/^\d+$/.test(tc)) {
+                showError('Geçerli bir 11 haneli TC kimlik numarası girin!');
+                return;
+            }
+            
+            // Loading göster
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result-section').style.display = 'none';
+            document.getElementById('error-section').style.display = 'none';
+            document.getElementById('parsed-results').style.display = 'none';
+            
+            // Vesika görselini sıfırla
+            document.getElementById('vesika-image').style.display = 'none';
+            document.getElementById('vesika-image-placeholder').style.display = 'flex';
+            document.getElementById('download-btn').style.display = 'none';
+            document.getElementById('image-info').style.display = 'none';
+            
+            try {
+                // GERÇEK API İSTEĞİ
+                const response = await fetch('/api/sorgu', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        api: 'Vesika Sorgulama (Hanedan)',
+                        tc: tc
+                    })
+                });
+
+                const result = await response.json();
+
+                // Sonuçları göster
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('result-section').style.display = 'block';
+                
+                // Ham API sonucunu göster
+                document.getElementById('api-result').textContent = JSON.stringify(result, null, 2);
+                
+                if (result.success) {
+                    // Başarılı sonuç
+                    showSuccess('Vesika sorgulama başarılı!');
+                    
+                    // Eğer data varsa, tabloya parse et
+                    if (result.data) {
+                        parseAndDisplayResults(result.data, tc);
+                    }
+                } else {
+                    // Hata durumu
+                    showError(result.error || 'Sorgulama sırasında bir hata oluştu');
+                }
+                
+            } catch (error) {
+                // Network hatası
+                document.getElementById('loading').style.display = 'none';
+                showError('Network hatası: ' + error.message);
+            }
+        });
+
+        function parseAndDisplayResults(data, tc) {
+            const tableBody = document.getElementById('table-body');
+            const vesikaStats = document.getElementById('vesika-stats');
+            const personalInfo = document.getElementById('personal-info');
+            const vesikaInfo = document.getElementById('vesika-info');
+            const historyContainer = document.getElementById('history-container');
+            tableBody.innerHTML = '';
+            vesikaStats.innerHTML = '';
+            personalInfo.innerHTML = '';
+            vesikaInfo.innerHTML = '';
+            historyContainer.innerHTML = '';
+            
+            let results = [];
+            
+            // API yanıtına göre veriyi işle
+            if (Array.isArray(data)) {
+                results = data;
+            } else if (typeof data === 'object' && data !== null) {
+                results = [data];
+            }
+            
+            if (results.length === 0) {
+                showError('Bu TC numarasına ait vesika bilgisi bulunamadı');
+                return;
+            }
+            
+            const vesikaData = results[0];
+            
+            // VESİKA GÖRSELİ İŞLEME
+            processVesikaImage(vesikaData, tc);
+            
+            // Kişisel bilgileri göster
+            personalInfo.innerHTML = `
+                <strong>Kişisel Bilgiler:</strong><br>
+                TC Kimlik No: <strong style="color: #ff4dff;">${tc}</strong><br>
+                Ad Soyad: ${vesikaData.ad || '-'} ${vesikaData.soyad || '-'} | 
+                Doğum Tarihi: ${vesikaData.dogumTarihi || '-'}<br>
+                Baba Adı: ${vesikaData.babaAdi || '-'} | 
+                Anne Adı: ${vesikaData.anneAdi || '-'}
+            `;
+            
+            // Vesika durumunu belirle
+            let statusClass = 'status-valid';
+            let statusText = 'GEÇERLİ';
+            if (vesikaData.durum === 'SÜRESİ DOLMUŞ') {
+                statusClass = 'status-expired';
+                statusText = 'SÜRESİ DOLMUŞ';
+            } else if (vesikaData.durum === 'ASKIDA') {
+                statusClass = 'status-suspended';
+                statusText = 'ASKIDA';
+            }
+            
+            // Vesika bilgilerini göster
+            vesikaInfo.innerHTML = `
+                <strong>Vesika Bilgileri:</strong><br>
+                Vesika No: ${vesikaData.vesikaNo || vesikaData.documentNumber || '-'} | 
+                Tür: ${vesikaData.vesikaTuru || vesikaData.documentType || '-'}<br>
+                Veriliş Tarihi: ${vesikaData.verilisTarihi || vesikaData.issueDate || '-'} | 
+                Son Geçerlilik: ${vesikaData.gecerlilikTarihi || vesikaData.expiryDate || '-'}<br>
+                Durum: <span class="vesika-status ${statusClass}">${statusText}</span> | 
+                Veren Makam: ${vesikaData.verenMakam || vesikaData.issuingAuthority || '-'}
+            `;
+            
+            // Vesika istatistiklerini oluştur
+            const stats = [
+                { label: 'Vesika No', value: vesikaData.vesikaNo || '-', icon: 'id-card' },
+                { label: 'Geçerlilik Süresi', value: (vesikaData.kalanGun || '0') + ' gün', icon: 'calendar-check' },
+                { label: 'Toplam İşlem', value: vesikaData.toplamIslem || '0', icon: 'file-alt' },
+                { label: 'Son Yenileme', value: vesikaData.sonYenileme || '-', icon: 'sync-alt' }
+            ];
+            
+            stats.forEach(stat => {
+                const statCard = document.createElement('div');
+                statCard.className = 'stat-card';
+                statCard.innerHTML = `
+                    <i class="fas fa-${stat.icon}" style="font-size: 24px; color: #ff4dff; margin-bottom: 10px;"></i>
+                    <div class="stat-value">${stat.value}</div>
+                    <div class="stat-label">${stat.label}</div>
+                `;
+                vesikaStats.appendChild(statCard);
+            });
+            
+            // Geçmiş bilgilerini göster
+            if (vesikaData.islemGecmisi && Array.isArray(vesikaData.islemGecmisi)) {
+                historyContainer.innerHTML = '<div class="result-title">İşlem Geçmişi</div>';
+                const historyGrid = document.createElement('div');
+                historyGrid.className = 'document-history';
+                
+                vesikaData.islemGecmisi.forEach((islem) => {
+                    const historyCard = document.createElement('div');
+                    historyCard.className = 'history-card';
+                    
+                    historyCard.innerHTML = `
+                        <div class="history-header">
+                            <div>
+                                <strong>${islem.tarih || '-'}</strong>
+                                <div style="font-size: 12px; color: #888;">${islem.saat || '-'}</div>
+                            </div>
+                            <span class="history-type">${islem.islemTuru || 'GENEL'}</span>
+                        </div>
+                        <div style="margin: 10px 0;">
+                            <div><strong>İşlem:</strong> ${islem.islem || '-'}</div>
+                            <div><strong>Makam:</strong> ${islem.makam || '-'}</div>
+                        </div>
+                        <div style="font-size: 11px; color: #888;">
+                            ${islem.aciklama || 'İşlem kaydı'}
+                        </div>
+                    `;
+                    historyGrid.appendChild(historyCard);
+                });
+                
+                historyContainer.appendChild(historyGrid);
+            }
+            
+            // Detaylı bilgileri tabloya ekle
+            const detailedInfo = [
+                { type: 'TC Kimlik No', value: tc, description: 'Sorgulanan TC kimlik numarası' },
+                { type: 'Ad Soyad', value: `${vesikaData.ad || '-'} ${vesikaData.soyad || '-'}`, description: 'Vesika sahibi ad soyad' },
+                { type: 'Doğum Tarihi', value: vesikaData.dogumTarihi || '-', description: 'Doğum tarihi' },
+                { type: 'Doğum Yeri', value: vesikaData.dogumYeri || '-', description: 'Doğum yeri' },
+                { type: 'Baba Adı', value: vesikaData.babaAdi || '-', description: 'Baba adı' },
+                { type: 'Anne Adı', value: vesikaData.anneAdi || '-', description: 'Anne adı' },
+                { type: 'Vesika No', value: vesikaData.vesikaNo || vesikaData.documentNumber || '-', description: 'Vesika numarası' },
+                { type: 'Vesika Türü', value: vesikaData.vesikaTuru || vesikaData.documentType || '-', description: 'Vesika türü' },
+                { type: 'Veriliş Tarihi', value: vesikaData.verilisTarihi || vesikaData.issueDate || '-', description: 'Veriliş tarihi' },
+                { type: 'Geçerlilik Tarihi', value: vesikaData.gecerlilikTarihi || vesikaData.expiryDate || '-', description: 'Son geçerlilik tarihi' },
+                { type: 'Kalan Gün', value: (vesikaData.kalanGun || '0') + ' gün', description: 'Geçerlilik süresi (gün)' },
+                { type: 'Veren Makam', value: vesikaData.verenMakam || vesikaData.issuingAuthority || '-', description: 'Veren makam' },
+                { type: 'Vesika Durumu', value: statusText, description: 'Vesika durumu' },
+                { type: 'Son Yenileme', value: vesikaData.sonYenileme || '-', description: 'Son yenileme tarihi' },
+                { type: 'Toplam İşlem', value: vesikaData.toplamIslem || '0', description: 'Toplam işlem sayısı' },
+                { type: 'Son İşlem Tarihi', value: vesikaData.sonIslemTarihi || '-', description: 'Son işlem tarihi' },
+                { type: 'Vesika Seri No', value: vesikaData.seriNo || '-', description: 'Vesika seri numarası' },
+                { type: 'Kayıt Tarihi', value: vesikaData.kayitTarihi || '-', description: 'Sisteme kayıt tarihi' },
+                { type: 'Güncelleme Tarihi', value: vesikaData.guncellemeTarihi || '-', description: 'Son güncelleme tarihi' },
+                { type: 'Not', value: vesikaData.not || '-', description: 'Ek bilgi/not' }
+            ];
+            
+            detailedInfo.forEach(info => {
+                const row = document.createElement('tr');
+                
+                // Kopyala butonu
+                const copyCell = document.createElement('td');
+                const copyButton = document.createElement('button');
+                copyButton.className = 'btn-copy';
+                copyButton.innerHTML = '<i class="fas fa-copy"></i> Kopyala';
+                copyButton.onclick = function() {
+                    const textToCopy = `${info.type}: ${info.value}`;
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        copyButton.innerHTML = '<i class="fas fa-check"></i> Kopyalandı!';
+                        setTimeout(() => {
+                            copyButton.innerHTML = '<i class="fas fa-copy"></i> Kopyala';
+                        }, 2000);
+                    });
+                };
+                copyCell.appendChild(copyButton);
+                row.appendChild(copyCell);
+                
+                // Bilgi Türü
+                const typeCell = document.createElement('td');
+                typeCell.textContent = info.type;
+                row.appendChild(typeCell);
+                
+                // Değer
+                const valueCell = document.createElement('td');
+                valueCell.textContent = info.value;
+                row.appendChild(valueCell);
+                
+                // Açıklama
+                const descCell = document.createElement('td');
+                descCell.textContent = info.description;
+                row.appendChild(descCell);
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Parse edilmiş sonuçları göster
+            document.getElementById('parsed-results').style.display = 'block';
+        }
+
+        function processVesikaImage(vesikaData, tc) {
+            const imageElement = document.getElementById('vesika-image');
+            const placeholder = document.getElementById('vesika-image-placeholder');
+            const downloadBtn = document.getElementById('download-btn');
+            const imageInfo = document.getElementById('image-info');
+
+            // API'den gelen görsel URL'sini veya base64 verisini kontrol et
+            if (vesikaData.vesikaResim) {
+                // Eğer base64 formatında geliyorsa
+                if (vesikaData.vesikaResim.startsWith('data:image/')) {
+                    imageElement.src = vesikaData.vesikaResim;
+                } 
+                // Eğer URL formatında geliyorsa
+                else if (vesikaData.vesikaResim.startsWith('http')) {
+                    imageElement.src = vesikaData.vesikaResim;
+                }
+                // Eğer base64 raw data geliyorsa
+                else {
+                    imageElement.src = `data:image/png;base64,${vesikaData.vesikaResim}`;
+                }
+
+                // Görsel yüklendiğinde
+                imageElement.onload = function() {
+                    placeholder.style.display = 'none';
+                    imageElement.style.display = 'block';
+                    downloadBtn.style.display = 'inline-flex';
+                    downloadBtn.href = imageElement.src;
+                    
+                    // Görsel bilgilerini göster
+                    imageInfo.style.display = 'block';
+                    imageInfo.innerHTML = `
+                        <strong>Görsel Bilgileri:</strong><br>
+                        Format: PNG | Boyut: ${this.naturalWidth}x${this.naturalHeight}px |
+                        TC: ${tc}
+                    `;
+                };
+
+                // Görsel yükleme hatası
+                imageElement.onerror = function() {
+                    placeholder.innerHTML = `
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 10px; color: #ef4444;"></i>
+                        <div>Vesika görseli yüklenemedi</div>
+                    `;
+                };
+            } else {
+                // Görsel bulunamadı
+                placeholder.innerHTML = `
+                    <i class="fas fa-image-slash" style="font-size: 48px; margin-bottom: 10px; color: #888;"></i>
+                    <div>Vesika görseli bulunamadı</div>
+                `;
+            }
+        }
+
+        function showError(message) {
+            const errorSection = document.getElementById('error-section');
+            errorSection.style.display = 'block';
+            errorSection.innerHTML = `<strong>Hata:</strong> ${message}`;
+        }
+
+        function showSuccess(message) {
+            const errorSection = document.getElementById('error-section');
+            errorSection.style.display = 'block';
+            errorSection.className = 'success-message';
+            errorSection.innerHTML = `<strong>Başarılı:</strong> ${message}`;
+        }
+
+        // Sayfa yüklendiğinde session kontrolü
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/user')
+                .then(response => response.json())
+                .then(user => {
+                    if (!user.logged_in) {
+                        window.location.href = '/login';
+                    }
+                })
+                .catch(error => {
+                    console.error('Kullanıcı kontrol hatası:', error);
+                    window.location.href = '/login';
+                });
+        });
+    </script>
+</body>
+</html>
